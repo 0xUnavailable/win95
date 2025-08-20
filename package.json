@@ -1,0 +1,9 @@
+{
+  "name": "win95",
+  "version": "1.0.0",
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "ws": "^8.18.3"
+  }
+}
