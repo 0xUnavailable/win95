@@ -1,5 +1,6 @@
-Win95 Chat Room
-Overview
+# Win95 Chat Room
+
+# Overview
 Win95 Chat Room is a real-time, end-to-end encrypted chat application designed for crypto builders to connect anonymously. With a retro Windows 95-themed interface, it provides a secure, ephemeral platform for authentic conversations without the influence of big accounts or algorithmic biases.This app ensures a level playing field where you have no identity just a funky username, and messages are never saved.
 Motivation
 I built this app to address the shortcomings of existing platforms for meaningful, private conversations in the crypto community:
