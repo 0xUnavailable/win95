@@ -9,11 +9,9 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ path: '/ws', server });
 
 const rooms = new Map();
-
-// Editable word lists for username generation
 const adjectives = ['Swift', 'Bright', 'Cool', 'Bold', 'Silent', 'Happy', 'Wise', 'Quick', 'Calm', 'Fierce'];
 const nouns = ['Fox', 'Wolf', 'Eagle', 'Bear', 'Hawk', 'Lion', 'Deer', 'Owl', 'Tiger', 'Panther'];
 
@@ -47,7 +45,7 @@ wss.on('connection', (ws) => {
             const data = JSON.parse(message);
 
             if (data.type === 'join-room') {
-                clientRoom = data.code;
+                clientRoom = data.code || 'GENERAL';
                 clientId = data.clientId;
 
                 if (!rooms.has(clientRoom)) {
@@ -64,17 +62,13 @@ wss.on('connection', (ws) => {
                     username
                 }));
 
-                // Broadcast public key, AES key, or message
-                if (data.type === 'public-key' || data.type === 'aes-key' || data.type === 'message') {
-                    room.clients.forEach((client, id) => {
-                        if (client.ws.readyState === WebSocket.OPEN && id !== clientId) {
-                            client.ws.send(JSON.stringify(data));
-                        }
-                    });
-                }
-
-                // Notify all clients of join
                 room.clients.forEach((client, id) => {
+                    if (client.ws.readyState === WebSocket.OPEN && id !== clientId) {
+                        client.ws.send(JSON.stringify(data));
+                    }
+                });
+
+                room.clients.forEach((client) => {
                     if (client.ws.readyState === WebSocket.OPEN) {
                         client.ws.send(JSON.stringify({
                             type: 'room-status',
@@ -82,7 +76,7 @@ wss.on('connection', (ws) => {
                         }));
                     }
                 });
-            } else if (data.type === 'public-key' || data.type === 'aes-key' || data.type === 'message') {
+            } else if (['message', 'image', 'voice', 'public-key', 'aes-key'].includes(data.type)) {
                 const room = rooms.get(clientRoom);
                 if (room) {
                     room.clients.forEach((client, id) => {
@@ -130,6 +124,7 @@ wss.on('connection', (ws) => {
 });
 
 // Start the server
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });

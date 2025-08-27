@@ -4,446 +4,292 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Win95 Chat Room</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Load WebSocket URL from environment variable or default
-        window.SERVER_URL = window.SERVER_URL;
-    </script>
     <style>
-        /* Windows 95-inspired styles */
         body {
-            font-family: 'MS Sans Serif', Geneva, sans-serif;
-            background: #008080;
+            font-family: 'MS Sans Serif', Arial, sans-serif;
+            background-color: #008080;
+            color: #000;
             margin: 0;
             padding: 20px;
-            font-size: 14px;
-        }
-        .win95-window {
-            background: #c0c0c0;
-            border: 2px solid;
-            border-top-color: #dfdfdf;
-            border-left-color: #dfdfdf;
-            border-right-color: #000;
-            border-bottom-color: #000;
-            box-shadow: 2px 2px 0 #000;
-        }
-        .win95-titlebar {
-            background: linear-gradient(to right, #000080, #1084d0);
-            color: white;
-            padding: 3px;
-            font-size: 14px;
-            font-weight: bold;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
+            min-height: 100vh;
         }
-        .win95-button {
-            background: #c0c0c0;
-            border: 1px solid;
-            border-top-color: #dfdfdf;
-            border-left-color: #dfdfdf;
+        .container {
+            background-color: #c0c0c0;
+            border: 2px solid #fff;
             border-right-color: #000;
             border-bottom-color: #000;
-            padding: 2px 8px;
-            font-size: 14px;
+            padding: 10px;
+            box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #808080;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #c0c0c0;
+            border: 2px solid #fff;
+            border-right-color: #000;
+            border-bottom-color: #000;
+            padding: 5px 10px;
             cursor: pointer;
+            font-family: 'MS Sans Serif', Arial, sans-serif;
         }
-        .win95-button:active {
-            border-top-color: #000;
-            border-left-color: #000;
-            border-right-color: #dfdfdf;
-            border-bottom-color: #dfdfdf;
+        button:hover {
+            background-color: #d8d8d8;
         }
-        .win95-input {
-            background: white;
-            border: 1px solid;
-            border-top-color: #000;
-            border-left-color: #000;
-            border-right-color: #dfdfdf;
-            border-bottom-color: #dfdfdf;
-            padding: 2px;
-            font-size: 14px;
+        input[type="text"], input[type="file"] {
+            background-color: #fff;
+            border: 2px solid #000;
+            border-right-color: #808080;
+            border-bottom-color: #808080;
+            padding: 5px;
+            font-family: 'MS Sans Serif', Arial, sans-serif;
+            width: calc(100% - 14px);
         }
-        .chat-area {
-            background: white;
-            border: 1px solid #000;
-            padding: 10px;
-            height: 400px;
+        #messages {
+            background-color: #fff;
+            border: 2px solid #000;
+            border-right-color: #808080;
+            border-bottom-color: #808080;
+            height: 300px;
             overflow-y: auto;
-        }
-        .message {
-            margin: 8px 0;
-            padding: 8px 12px;
-            border-radius: 3px;
-            max-width: 70%;
-            word-wrap: break-word;
-            font-size: 14px;
-        }
-        .message-self {
-            margin-left: auto;
-            text-align: right;
-        }
-        .message-other {
-            margin-right: auto;
-            text-align: left;
-        }
-        .motivation-panel {
-            background: #c0c0c0;
-            border: 1px solid;
-            border-top-color: #dfdfdf;
-            border-left-color: #dfdfdf;
-            border-right-color: #000;
-            border-bottom-color: #000;
             padding: 10px;
-            margin-top: 20px;
-            font-size: 14px;
-        }
-        .motivation-panel h2 {
-            font-size: 16px;
             margin-bottom: 10px;
         }
-        .motivation-panel ul {
-            margin-left: 20px;
+        #chat {
+            display: none;
         }
-        .developer-name {
+        .message {
+            margin-bottom: 10px;
+            max-width: 80%;
+            padding: 5px;
+            border-radius: 5px;
+            background-color: #e0e0e0;
+        }
+        .sender {
+            float: right;
+            text-align: right;
+            background-color: #add8e6;
+        }
+        .receiver {
+            float: left;
+            text-align: left;
+        }
+        .status {
+            color: #555;
             text-align: center;
+            clear: both;
+        }
+        img {
+            max-width: 200px;
             margin-top: 5px;
+        }
+        audio {
+            margin-top: 5px;
+        }
+        .info {
             font-size: 14px;
+            margin-top: 20px;
+        }
+        ul {
+            list-style-type: disc;
+            padding-left: 20px;
         }
     </style>
 </head>
 <body>
-    <div id="app" class="max-w-2xl mx-auto win95-window">
-        <div class="win95-titlebar">
-            <span>Win95 Chat Room</span>
-            <div>
-                <button id="close" class="win95-button">x</button>
-            </div>
+    <div id="home" class="container">
+        <h1>Win95 Chat Room</h1>
+        <button onclick="joinRoom('GENERAL')">Join General Chat</button>
+        <button onclick="createRoom()">Create Room</button>
+        <div style="margin-top: 10px;">
+            <input id="roomCode" type="text" placeholder="Enter room code">
+            <button onclick="joinRoom(document.getElementById('roomCode').value)">Join Room</button>
         </div>
-        <div id="home-screen" class="p-4">
-            <div class="mb-4">
-                <button id="create-room" class="win95-button">Create Room</button>
-            </div>
-            <div>
-                <input id="room-code" type="text" placeholder="Enter Room Code (e.g., XK7P9M)" class="win95-input w-48">
-                <button id="join-room" class="win95-button">Join Room</button>
-            </div>
-            <div class="motivation-panel">
-                <p>Existing platforms fall short for authentic, private conversations in the crypto community:</p>
-                <ul>
-                    <li><strong>Twitter</strong>: A popularity contest where algorithms favor big accounts, giving them undue influence. DMs feel suspicious and lack real conversation.</li>
-                    <li><strong>Reddit</strong>: Overly restrictive with strict moderators and automods, not designed for real-time chat.</li>
-                    <li><strong>Discord</strong>: Dominated by bots and airdrop farmers, interactions feel transactional, not authentic.</li>
-                    <li><strong>Bluesky</strong>: A low-budget Twitter clone with little engagement, essentially a dead space.</li>
-                    <li><strong>Farcaster</strong>: Promising but hindered by algorithmic issues, not ideal for anonymous collaboration.</li>
-                </ul>
-                <p><strong>Our Goal</strong>: Create a level playing field for crypto builders to connect anonymously. You have no identity, messages are end-to-end encrypted with AES-GCM, and nothing is saved. No influence, no bias—just real conversations.</p>
-                <p class="developer-name"><strong>Developed by 0xunavailabe</strong></p>
-            </div>
+        <div class="info">
+            <p>Existing platforms fall short for authentic, private conversations in the crypto community:</p>
+            <ul>
+                <li>Twitter: A popularity contest where algorithms favor big accounts, giving them undue influence. DMs feel suspicious and lack real conversation.</li>
+                <li>Reddit: Overly restrictive with strict moderators and automods, not designed for real-time chat.</li>
+                <li>Discord: Dominated by bots and airdrop farmers, interactions feel transactional, not authentic.</li>
+                <li>Bluesky: A low-budget Twitter clone with little engagement, essentially a dead space.</li>
+                <li>Farcaster: Promising but hindered by algorithmic issues, not ideal for anonymous collaboration.</li>
+            </ul>
+            <p>Our Goal: Create a level playing field for crypto builders to connect anonymously. You have no identity, messages are end-to-end encrypted with AES-GCM, and nothing is saved. No influence, no bias—just real conversations.</p>
+            <p>Developed by 0xunavailabe</p>
         </div>
-        <div id="chat-screen" class="p-4 hidden">
-            <div id="room-info" class="mb-2" style="font-size: 14px;"></div>
-            <div id="chat-area" class="chat-area mb-2"></div>
-            <div class="flex">
-                <input id="message-input" type="text" placeholder="Type a message..." class="win95-input flex-grow mr-2">
-                <button id="send-message" class="win95-button">Send</button>
-            </div>
+    </div>
+    <div id="chat" class="container">
+        <h1>Room: <span id="roomName"></span> | Username: <span id="username">Connecting...</span></h1>
+        <button onclick="backToHome()" style="margin-bottom: 10px;">Back to Home</button>
+        <div id="messages"></div>
+        <div>
+            <input id="messageInput" type="text" placeholder="Type a message..." onkeydown="if(event.key === 'Enter') sendMessage()">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+        <div style="margin-top: 10px;">
+            <input id="imageInput" type="file" accept="image/*" onchange="sendImage()">
+            <button id="recordButton" onclick="toggleRecording()">Record Voice</button>
         </div>
     </div>
 
     <script>
-        // Clean Architecture: Domain Layer
-        class Room {
-            constructor(code, isCreator, clientId, username) {
-                this.code = code;
-                this.isCreator = isCreator;
-                this.clientId = clientId;
-                this.username = username;
-                this.aesKey = null;
-                this.publicKey = null;
-                this.privateKey = null;
-                this.peerPublicKeys = new Map();
+        let ws;
+        let username = '';
+        let roomCode = '';
+        const clientId = Math.random().toString(36).substring(2);
+        let mediaRecorder;
+        let audioChunks = [];
+        const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+
+        function createRoom() {
+            roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            joinRoom(roomCode);
+        }
+
+        function joinRoom(code) {
+            if (!code && code !== 'GENERAL') return;
+            roomCode = code.toUpperCase();
+            document.getElementById('home').style.display = 'none';
+            document.getElementById('chat').style.display = 'block';
+            document.getElementById('roomName').textContent = roomCode;
+            connectWebSocket();
+        }
+
+        function backToHome() {
+            if (ws) {
+                ws.send(JSON.stringify({ type: 'leave-room' }));
+                ws.close();
+            }
+            document.getElementById('chat').style.display = 'none';
+            document.getElementById('home').style.display = 'block';
+            document.getElementById('messages').innerHTML = '';
+            document.getElementById('messageInput').value = '';
+            document.getElementById('imageInput').value = '';
+            document.getElementById('roomCode').value = '';
+            document.getElementById('username').textContent = 'Connecting...';
+            username = '';
+            roomCode = '';
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                document.getElementById('recordButton').textContent = 'Record Voice';
             }
         }
 
-        class Message {
-            constructor(sender, content, timestamp) {
-                this.sender = sender;
-                this.content = content;
-                this.timestamp = timestamp;
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${window.location.host}/ws`);
+            ws.onopen = () => {
+                ws.send(JSON.stringify({ type: 'join-room', code: roomCode, clientId }));
+            };
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'username-assigned') {
+                    username = data.username;
+                    document.getElementById('username').textContent = username;
+                } else if (data.type === 'room-status') {
+                    addMessage(data.message, 'status');
+                } else if (data.type === 'message' && data.clientId !== clientId) {
+                    addMessage(`${data.username}: ${data.message}`, 'receiver');
+                } else if (data.type === 'image' && data.clientId !== clientId) {
+                    addImage(data.username, data.image, 'receiver');
+                } else if (data.type === 'voice' && data.clientId !== clientId) {
+                    addVoice(data.username, data.audio, 'receiver');
+                }
+            };
+            ws.onclose = () => {
+                addMessage('Disconnected from server', 'status');
+            };
+        }
+
+        function addMessage(text, className = '') {
+            const messages = document.getElementById('messages');
+            const p = document.createElement('p');
+            p.className = `message ${className}`;
+            p.textContent = text;
+            messages.appendChild(p);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addImage(username, imageData, className = '') {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${className}`;
+            div.innerHTML = `<p><strong>${username}:</strong></p><img src="${imageData}" alt="Shared image">`;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addVoice(username, audioData, className = '') {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${className}`;
+            div.innerHTML = `<p><strong>${username}:</strong></p><audio controls src="${audioData}"></audio>`;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            if (input.value.trim()) {
+                const message = input.value;
+                ws.send(JSON.stringify({ type: 'message', message, username, clientId }));
+                addMessage(`${username}: ${message}`, 'sender'); // Add sender's message locally
+                input.value = '';
             }
         }
 
-        // Clean Architecture: Application Layer
-        class ChatService {
-            constructor() {
-                this.room = null;
-                this.ws = new WebSocket(window.SERVER_URL);
-                this.onMessageReceived = () => {};
-                this.onRoomStatusChanged = () => {};
-                this.setupWebSocket();
-            }
-
-            async setupWebSocket() {
-                this.ws.onopen = () => {
-                    this.onRoomStatusChanged('Connected to server');
-                };
-                this.ws.onmessage = async (event) => {
-                    const data = JSON.parse(event.data);
-                    if (data.type === 'username-assigned') {
-                        this.room.username = data.username;
-                        await this.generateKeys();
-                        this.ws.send(JSON.stringify({
-                            type: 'public-key',
-                            code: this.room.code,
-                            clientId: this.room.clientId,
-                            publicKey: await this.exportPublicKey(this.room.publicKey)
-                        }));
-                    } else if (data.type === 'public-key' && data.clientId !== this.room.clientId) {
-                        this.room.peerPublicKeys.set(data.clientId, await this.importPublicKey(data.publicKey));
-                        const encryptedKey = await this.encryptAESKey(this.room.aesKey, this.room.peerPublicKeys.get(data.clientId));
-                        this.ws.send(JSON.stringify({
-                            type: 'aes-key',
-                            code: this.room.code,
-                            clientId: this.room.clientId,
-                            targetClientId: data.clientId,
-                            encryptedKey
-                        }));
-                    } else if (data.type === 'aes-key' && data.targetClientId === this.room.clientId) {
-                        this.room.aesKey = await this.decryptAESKey(data.encryptedKey, this.room.privateKey);
-                    } else if (data.type === 'message' && this.room.aesKey) {
-                        if (data.clientId !== this.room.clientId) {
-                            const decryptedContent = await this.decryptMessage(data.encryptedContent);
-                            this.onMessageReceived(new Message(data.username, decryptedContent, data.timestamp));
-                        }
-                    } else if (data.type === 'room-status') {
-                        this.onRoomStatusChanged(data.message);
-                    }
-                };
-                this.ws.onerror = (error) => {
-                    console.error('WebSocket error:', error);
-                    this.onRoomStatusChanged('Connection error. Please try again.');
-                };
-                this.ws.onclose = () => {
-                    this.onRoomStatusChanged('Disconnected from server.');
-                };
-            }
-
-            async generateKeys() {
-                const keyPair = await crypto.subtle.generateKey(
-                    { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
-                    true,
-                    ['encrypt', 'decrypt']
-                );
-                this.room.publicKey = keyPair.publicKey;
-                this.room.privateKey = keyPair.privateKey;
-                this.room.aesKey = await crypto.subtle.generateKey(
-                    { name: 'AES-GCM', length: 256 },
-                    true,
-                    ['encrypt', 'decrypt']
-                );
-            }
-
-            async exportPublicKey(key) {
-                const exported = await crypto.subtle.exportKey('spki', key);
-                return btoa(String.fromCharCode(...new Uint8Array(exported)));
-            }
-
-            async importPublicKey(key) {
-                const binary = atob(key);
-                const buffer = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) {
-                    buffer[i] = binary.charCodeAt(i);
+        function sendImage() {
+            const input = document.getElementById('imageInput');
+            const file = input.files[0];
+            if (file) {
+                if (file.size > MAX_IMAGE_SIZE) {
+                    addMessage('Image size exceeds 5MB limit', 'status');
+                    input.value = '';
+                    return;
                 }
-                return crypto.subtle.importKey(
-                    'spki',
-                    buffer,
-                    { name: 'RSA-OAEP', hash: 'SHA-256' },
-                    true,
-                    ['encrypt']
-                );
-            }
-
-            async encryptAESKey(aesKey, publicKey) {
-                const exported = await crypto.subtle.exportKey('raw', aesKey);
-                const encrypted = await crypto.subtle.encrypt(
-                    { name: 'RSA-OAEP' },
-                    publicKey,
-                    exported
-                );
-                return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
-            }
-
-            async decryptAESKey(encryptedKey, privateKey) {
-                const binary = atob(encryptedKey);
-                const buffer = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) {
-                    buffer[i] = binary.charCodeAt(i);
-                }
-                const decrypted = await crypto.subtle.decrypt(
-                    { name: 'RSA-OAEP' },
-                    privateKey,
-                    buffer
-                );
-                return crypto.subtle.importKey(
-                    'raw',
-                    decrypted,
-                    { name: 'AES-GCM', length: 256 },
-                    true,
-                    ['encrypt', 'decrypt']
-                );
-            }
-
-            async encryptMessage(content) {
-                const iv = crypto.getRandomValues(new Uint8Array(12));
-                const encoded = new TextEncoder().encode(content);
-                const encrypted = await crypto.subtle.encrypt(
-                    { name: 'AES-GCM', iv },
-                    this.room.aesKey,
-                    encoded
-                );
-                return { iv: btoa(String.fromCharCode(...iv)), data: btoa(String.fromCharCode(...new Uint8Array(encrypted))) };
-            }
-
-            async decryptMessage({ iv, data }) {
-                const ivArray = new Uint8Array(atob(iv).split('').map(c => c.charCodeAt(0)));
-                const dataArray = new Uint8Array(atob(data).split('').map(c => c.charCodeAt(0)));
-                const decrypted = await crypto.subtle.decrypt(
-                    { name: 'AES-GCM', iv: ivArray },
-                    this.room.aesKey,
-                    dataArray
-                );
-                return new TextDecoder().decode(decrypted);
-            }
-
-            createRoom(code) {
-                this.room = new Room(code, true, 'client-' + Math.random().toString(36).substr(2, 9), null);
-                this.ws.send(JSON.stringify({
-                    type: 'join-room',
-                    code: this.room.code,
-                    clientId: this.room.clientId,
-                    isCreator: this.room.isCreator
-                }));
-                this.onRoomStatusChanged(`Room ${code} created. Waiting for peers...`);
-            }
-
-            joinRoomWithCode(code) {
-                this.room = new Room(code, false, 'client-' + Math.random().toString(36).substr(2, 9), null);
-                this.ws.send(JSON.stringify({
-                    type: 'join-room',
-                    code: this.room.code,
-                    clientId: this.room.clientId,
-                    isCreator: this.room.isCreator
-                }));
-                this.onRoomStatusChanged(`Joined room ${code}`);
-            }
-
-            async sendMessage(content) {
-                const message = new Message(this.room.username, content, new Date().toLocaleTimeString());
-                const encrypted = await this.encryptMessage(content);
-                this.ws.send(JSON.stringify({
-                    type: 'message',
-                    code: this.room.code,
-                    clientId: this.room.clientId,
-                    username: this.room.username,
-                    encryptedContent: encrypted,
-                    timestamp: message.timestamp
-                }));
-                return message;
-            }
-
-            close() {
-                if (this.room) {
-                    this.ws.send(JSON.stringify({
-                        type: 'leave-room',
-                        code: this.room.code,
-                        clientId: this.room.clientId,
-                        isCreator: this.room.isCreator,
-                        username: this.room.username
-                    }));
-                }
-                this.ws.close();
-                this.room = null;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    ws.send(JSON.stringify({ type: 'image', image: reader.result, username, clientId }));
+                    addImage(username, reader.result, 'sender'); // Add sender's image locally
+                    input.value = '';
+                };
+                reader.readAsDataURL(file);
             }
         }
 
-        // Clean Architecture: Presentation Layer
-        class ChatUI {
-            constructor() {
-                this.chatService = new ChatService();
-                this.setupEventListeners();
-            }
-
-            setupEventListeners() {
-                document.getElementById('create-room').addEventListener('click', () => {
-                    const code = this.generateRoomCode();
-                    document.getElementById('home-screen').classList.add('hidden');
-                    document.getElementById('chat-screen').classList.remove('hidden');
-                    this.chatService.createRoom(code);
-                });
-
-                document.getElementById('join-room').addEventListener('click', () => {
-                    const code = document.getElementById('room-code').value.toUpperCase();
-                    if (code.length !== 6 || !/^[A-Z0-9]{6}$/.test(code)) {
-                        alert('Room code must be 6 alphanumeric characters');
-                        return;
-                    }
-                    document.getElementById('home-screen').classList.add('hidden');
-                    document.getElementById('chat-screen').classList.remove('hidden');
-                    this.chatService.joinRoomWithCode(code);
-                });
-
-                document.getElementById('send-message').addEventListener('click', () => {
-                    const input = document.getElementById('message-input');
-                    const content = input.value.trim();
-                    if (content) {
-                        this.chatService.sendMessage(content).then((message) => {
-                            this.displayMessage(message, true);
-                            input.value = '';
-                        });
-                    }
-                });
-
-                document.getElementById('message-input').addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        document.getElementById('send-message').click();
-                    }
-                });
-
-                document.getElementById('close').addEventListener('click', () => {
-                    this.chatService.close();
-                    window.location.reload();
-                });
-
-                this.chatService.onMessageReceived = (message) => {
-                    this.displayMessage(message, false);
-                };
-
-                this.chatService.onRoomStatusChanged = (status) => {
-                    document.getElementById('room-info').textContent = status;
-                };
-            }
-
-            generateRoomCode() {
-                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-                let code = '';
-                for (let i = 0; i < 6; i++) {
-                    code += chars.charAt(Math.floor(Math.random() * chars.length));
+        async function toggleRecording() {
+            const button = document.getElementById('recordButton');
+            if (button.textContent === 'Record Voice') {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                    mediaRecorder.onstop = () => {
+                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            ws.send(JSON.stringify({ type: 'voice', audio: reader.result, username, clientId }));
+                            addVoice(username, reader.result, 'sender'); // Add sender's voice message locally
+                        };
+                        reader.readAsDataURL(blob);
+                    };
+                    mediaRecorder.start();
+                    button.textContent = 'Stop Recording';
+                } catch (error) {
+                    addMessage('Error accessing microphone', 'status');
                 }
-                return code;
-            }
-
-            displayMessage(message, isSelf) {
-                const chatArea = document.getElementById('chat-area');
-                const messageEl = document.createElement('div');
-                messageEl.classList.add('message', isSelf ? 'message-self' : 'message-other');
-                messageEl.textContent = `[${message.timestamp}] ${message.sender}: ${message.content}`;
-                chatArea.appendChild(messageEl);
-                chatArea.scrollTop = chatArea.scrollHeight;
+            } else {
+                mediaRecorder.stop();
+                button.textContent = 'Record Voice';
             }
         }
-
-        // Initialize the application
-        new ChatUI();
     </script>
 </body>
+</html>
