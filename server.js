@@ -39,10 +39,12 @@ wss.on('connection', (ws) => {
     let clientRoom = null;
     let clientId = null;
     let username = null;
+    let messageCounter = 0;
 
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message);
+            console.log('Server received:', data);
 
             if (data.type === 'join-room') {
                 clientRoom = data.code || 'GENERAL';
@@ -62,7 +64,6 @@ wss.on('connection', (ws) => {
                     username
                 }));
 
-                // Broadcast user list
                 const userList = Array.from(room.usernames);
                 room.clients.forEach((client) => {
                     if (client.ws.readyState === WebSocket.OPEN) {
@@ -73,7 +74,6 @@ wss.on('connection', (ws) => {
                     }
                 });
 
-                // Notify all clients of join
                 room.clients.forEach((client) => {
                     if (client.ws.readyState === WebSocket.OPEN) {
                         client.ws.send(JSON.stringify({
@@ -82,14 +82,21 @@ wss.on('connection', (ws) => {
                         }));
                     }
                 });
-            } else if (['message', 'image', 'voice', 'public-key', 'aes-key', 'reply'].includes(data.type)) {
+            } else if (['message', 'image', 'voice', 'public-key', 'aes-key', 'reply', 'reaction'].includes(data.type)) {
                 const room = rooms.get(clientRoom);
                 if (room) {
+                    if (!data.messageId && data.type !== 'reaction') {
+                        data.messageId = `${clientId}-${messageCounter++}`;
+                    }
+                    data.username = username;
+                    console.log('Server broadcasting:', data);
                     room.clients.forEach((client, id) => {
                         if (client.ws.readyState === WebSocket.OPEN && id !== clientId) {
                             client.ws.send(JSON.stringify(data));
                         }
                     });
+                } else {
+                    console.warn(`Room ${clientRoom} not found for message type ${data.type}`);
                 }
             } else if (data.type === 'leave-room' && clientRoom) {
                 handleClientLeave(clientRoom, clientId, username);
@@ -115,7 +122,6 @@ wss.on('connection', (ws) => {
             room.clients.delete(clientId);
             room.usernames.delete(username);
 
-            // Broadcast updated user list
             const userList = Array.from(room.usernames);
             room.clients.forEach((client) => {
                 if (client.ws.readyState === WebSocket.OPEN) {
@@ -126,7 +132,6 @@ wss.on('connection', (ws) => {
                 }
             });
 
-            // Notify all clients of leave
             room.clients.forEach((client) => {
                 if (client.ws.readyState === WebSocket.OPEN) {
                     client.ws.send(JSON.stringify({
