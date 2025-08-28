@@ -71,6 +71,7 @@
             padding: 5px;
             border-radius: 5px;
             background-color: #e0e0e0;
+            cursor: context-menu;
         }
         .sender {
             float: right;
@@ -101,6 +102,59 @@
             list-style-type: disc;
             padding-left: 20px;
         }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #c0c0c0;
+            min-width: 160px;
+            border: 2px solid #fff;
+            border-right-color: #000;
+            border-bottom-color: #000;
+            box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #808080;
+            z-index: 1;
+        }
+        .dropdown-content p {
+            margin: 5px 10px;
+            padding: 5px;
+        }
+        .dropdown-content p:hover {
+            background-color: #000080;
+            color: #fff;
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        .context-menu {
+            display: none;
+            position: absolute;
+            background-color: #c0c0c0;
+            border: 2px solid #fff;
+            border-right-color: #000;
+            border-bottom-color: #000;
+            box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #808080;
+            z-index: 2;
+            min-width: 120px;
+        }
+        .context-menu p {
+            margin: 5px 10px;
+            padding: 5px;
+            cursor: pointer;
+        }
+        .context-menu p:hover {
+            background-color: #000080;
+            color: #fff;
+        }
+        .reply-quote {
+            font-style: italic;
+            color: #555;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -127,7 +181,13 @@
     </div>
     <div id="chat" class="container">
         <h1>Room: <span id="roomName"></span> | Username: <span id="username">Connecting...</span></h1>
-        <button onclick="backToHome()" style="margin-bottom: 10px;">Back to Home</button>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <button onclick="backToHome()">Back to Home</button>
+            <div class="dropdown">
+                <button>Users in Room</button>
+                <div id="userList" class="dropdown-content"></div>
+            </div>
+        </div>
         <div id="messages"></div>
         <div>
             <input id="messageInput" type="text" placeholder="Type a message..." onkeydown="if(event.key === 'Enter') sendMessage()">
@@ -136,6 +196,10 @@
         <div style="margin-top: 10px;">
             <input id="imageInput" type="file" accept="image/*" onchange="sendImage()">
             <button id="recordButton" onclick="toggleRecording()">Record Voice</button>
+        </div>
+        <div id="contextMenu" class="context-menu">
+            <p onclick="copyMessage()">Copy Message</p>
+            <p onclick="replyToMessage()">Reply to Message</p>
         </div>
     </div>
 
@@ -147,6 +211,7 @@
         let mediaRecorder;
         let audioChunks = [];
         const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+        let selectedMessage = null;
 
         function createRoom() {
             roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -174,6 +239,7 @@
             document.getElementById('imageInput').value = '';
             document.getElementById('roomCode').value = '';
             document.getElementById('username').textContent = 'Connecting...';
+            document.getElementById('userList').innerHTML = '';
             username = '';
             roomCode = '';
             if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -194,12 +260,16 @@
                     document.getElementById('username').textContent = username;
                 } else if (data.type === 'room-status') {
                     addMessage(data.message, 'status');
+                } else if (data.type === 'user-list') {
+                    updateUserList(data.users);
                 } else if (data.type === 'message' && data.clientId !== clientId) {
-                    addMessage(`${data.username}: ${data.message}`, 'receiver');
+                    addMessage(`${data.username}: ${data.message}`, 'receiver', { type: 'text', content: data.message });
                 } else if (data.type === 'image' && data.clientId !== clientId) {
-                    addImage(data.username, data.image, 'receiver');
+                    addImage(data.username, data.image, 'receiver', { type: 'image', content: data.image });
                 } else if (data.type === 'voice' && data.clientId !== clientId) {
-                    addVoice(data.username, data.audio, 'receiver');
+                    addVoice(data.username, data.audio, 'receiver', { type: 'voice', content: data.audio });
+                } else if (data.type === 'reply' && data.clientId !== clientId) {
+                    addReply(data.username, data.message, data.replyTo, 'receiver');
                 }
             };
             ws.onclose = () => {
@@ -207,40 +277,141 @@
             };
         }
 
-        function addMessage(text, className = '') {
+        function updateUserList(users) {
+            const userList = document.getElementById('userList');
+            userList.innerHTML = '';
+            users.forEach(user => {
+                const p = document.createElement('p');
+                p.textContent = user;
+                userList.appendChild(p);
+            });
+        }
+
+        function addMessage(text, className = '', data = null) {
             const messages = document.getElementById('messages');
             const p = document.createElement('p');
             p.className = `message ${className}`;
             p.textContent = text;
+            if (data) p.dataset.message = JSON.stringify(data);
+            p.addEventListener('contextmenu', (e) => showContextMenu(e, p));
             messages.appendChild(p);
             messages.scrollTop = messages.scrollHeight;
         }
 
-        function addImage(username, imageData, className = '') {
+        function addImage(username, imageData, className = '', data = null) {
             const messages = document.getElementById('messages');
             const div = document.createElement('div');
             div.className = `message ${className}`;
             div.innerHTML = `<p><strong>${username}:</strong></p><img src="${imageData}" alt="Shared image">`;
+            if (data) div.dataset.message = JSON.stringify(data);
+            div.addEventListener('contextmenu', (e) => showContextMenu(e, div));
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
         }
 
-        function addVoice(username, audioData, className = '') {
+        function addVoice(username, audioData, className = '', data = null) {
             const messages = document.getElementById('messages');
             const div = document.createElement('div');
             div.className = `message ${className}`;
             div.innerHTML = `<p><strong>${username}:</strong></p><audio controls src="${audioData}"></audio>`;
+            if (data) div.dataset.message = JSON.stringify(data);
+            div.addEventListener('contextmenu', (e) => showContextMenu(e, div));
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addReply(username, message, replyTo, className = '') {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${className}`;
+            let quoteContent = replyTo.content;
+            if (replyTo.type === 'image') quoteContent = '[Image]';
+            if (replyTo.type === 'voice') quoteContent = '[Voice Message]';
+            div.innerHTML = `<p class="reply-quote">${replyTo.username}: ${quoteContent}</p><p><strong>${username}:</strong> ${message}</p>`;
+            div.dataset.message = JSON.stringify({ type: 'text', content: message });
+            div.addEventListener('contextmenu', (e) => showContextMenu(e, div));
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function showContextMenu(event, element) {
+            event.preventDefault();
+            selectedMessage = element;
+            const contextMenu = document.getElementById('contextMenu');
+            contextMenu.style.display = 'block';
+            contextMenu.style.left = `${event.pageX}px`;
+            contextMenu.style.top = `${event.pageY}px`;
+            // Hide context menu when clicking elsewhere
+            document.addEventListener('click', hideContextMenu, { once: true });
+        }
+
+        function hideContextMenu() {
+            document.getElementById('contextMenu').style.display = 'none';
+            selectedMessage = null;
+        }
+
+        function copyMessage() {
+            if (!selectedMessage) return;
+            const data = selectedMessage.dataset.message ? JSON.parse(selectedMessage.dataset.message) : null;
+            let textToCopy = '';
+            if (data) {
+                if (data.type === 'text') {
+                    textToCopy = selectedMessage.textContent.split(': ').slice(1).join(': ');
+                } else if (data.type === 'image' || data.type === 'voice') {
+                    textToCopy = data.content;
+                }
+            }
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                addMessage('Message copied to clipboard', 'status');
+            }).catch(() => {
+                addMessage('Failed to copy message', 'status');
+            });
+            hideContextMenu();
+        }
+
+        function replyToMessage() {
+            if (!selectedMessage) return;
+            const data = selectedMessage.dataset.message ? JSON.parse(selectedMessage.dataset.message) : null;
+            if (data) {
+                const input = document.getElementById('messageInput');
+                let replyContent = data.content;
+                if (data.type === 'image') replyContent = '[Image]';
+                if (data.type === 'voice') replyContent = '[Voice Message]';
+                input.value = `Replying to ${selectedMessage.querySelector('strong')?.textContent || 'unknown'}: ${replyContent} > `;
+                input.focus();
+            }
+            hideContextMenu();
         }
 
         function sendMessage() {
             const input = document.getElementById('messageInput');
             if (input.value.trim()) {
                 const message = input.value;
-                ws.send(JSON.stringify({ type: 'message', message, username, clientId }));
-                addMessage(`${username}: ${message}`, 'sender'); // Add sender's message locally
+                if (message.includes('>')) {
+                    const parts = message.split('> ');
+                    const replyInfo = parts[0].match(/Replying to (.+?): (.+?)$/);
+                    if (replyInfo && selectedMessage) {
+                        const replyToUsername = replyInfo[1];
+                        const replyToContent = replyInfo[2];
+                        const replyToData = selectedMessage.dataset.message ? JSON.parse(selectedMessage.dataset.message) : { type: 'text', content: replyToContent };
+                        ws.send(JSON.stringify({
+                            type: 'reply',
+                            message: parts[1].trim(),
+                            username,
+                            clientId,
+                            replyTo: { username: replyToUsername, type: replyToData.type, content: replyToData.content }
+                        }));
+                        addReply(username, parts[1].trim(), { username: replyToUsername, type: replyToData.type, content: replyToData.content }, 'sender');
+                    } else {
+                        ws.send(JSON.stringify({ type: 'message', message, username, clientId }));
+                        addMessage(`${username}: ${message}`, 'sender', { type: 'text', content: message });
+                    }
+                } else {
+                    ws.send(JSON.stringify({ type: 'message', message, username, clientId }));
+                    addMessage(`${username}: ${message}`, 'sender', { type: 'text', content: message });
+                }
                 input.value = '';
+                selectedMessage = null;
             }
         }
 
@@ -256,7 +427,7 @@
                 const reader = new FileReader();
                 reader.onload = () => {
                     ws.send(JSON.stringify({ type: 'image', image: reader.result, username, clientId }));
-                    addImage(username, reader.result, 'sender'); // Add sender's image locally
+                    addImage(username, reader.result, 'sender', { type: 'image', content: reader.result });
                     input.value = '';
                 };
                 reader.readAsDataURL(file);
@@ -276,7 +447,7 @@
                         const reader = new FileReader();
                         reader.onload = () => {
                             ws.send(JSON.stringify({ type: 'voice', audio: reader.result, username, clientId }));
-                            addVoice(username, reader.result, 'sender'); // Add sender's voice message locally
+                            addVoice(username, reader.result, 'sender', { type: 'voice', content: reader.result });
                         };
                         reader.readAsDataURL(blob);
                     };

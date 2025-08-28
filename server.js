@@ -62,12 +62,18 @@ wss.on('connection', (ws) => {
                     username
                 }));
 
-                room.clients.forEach((client, id) => {
-                    if (client.ws.readyState === WebSocket.OPEN && id !== clientId) {
-                        client.ws.send(JSON.stringify(data));
+                // Broadcast user list
+                const userList = Array.from(room.usernames);
+                room.clients.forEach((client) => {
+                    if (client.ws.readyState === WebSocket.OPEN) {
+                        client.ws.send(JSON.stringify({
+                            type: 'user-list',
+                            users: userList
+                        }));
                     }
                 });
 
+                // Notify all clients of join
                 room.clients.forEach((client) => {
                     if (client.ws.readyState === WebSocket.OPEN) {
                         client.ws.send(JSON.stringify({
@@ -76,7 +82,7 @@ wss.on('connection', (ws) => {
                         }));
                     }
                 });
-            } else if (['message', 'image', 'voice', 'public-key', 'aes-key'].includes(data.type)) {
+            } else if (['message', 'image', 'voice', 'public-key', 'aes-key', 'reply'].includes(data.type)) {
                 const room = rooms.get(clientRoom);
                 if (room) {
                     room.clients.forEach((client, id) => {
@@ -108,6 +114,19 @@ wss.on('connection', (ws) => {
         if (room) {
             room.clients.delete(clientId);
             room.usernames.delete(username);
+
+            // Broadcast updated user list
+            const userList = Array.from(room.usernames);
+            room.clients.forEach((client) => {
+                if (client.ws.readyState === WebSocket.OPEN) {
+                    client.ws.send(JSON.stringify({
+                        type: 'user-list',
+                        users: userList
+                    }));
+                }
+            });
+
+            // Notify all clients of leave
             room.clients.forEach((client) => {
                 if (client.ws.readyState === WebSocket.OPEN) {
                     client.ws.send(JSON.stringify({
@@ -116,6 +135,7 @@ wss.on('connection', (ws) => {
                     }));
                 }
             });
+
             if (room.clients.size === 0) {
                 rooms.delete(roomCode);
             }

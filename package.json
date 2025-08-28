@@ -1,9 +1,14 @@
 {
   "name": "win95",
   "version": "1.0.0",
+  "scripts":{
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
   "dependencies": {
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "nodemon": "^3.1.10",
     "ws": "^8.18.3"
   }
 }
