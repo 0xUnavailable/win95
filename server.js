@@ -1,12 +1,12 @@
 const express = require('express');
-const https = require('https'); // Changed from http to https
+const http = require('http'); // Reverted to http from https
 const WebSocket = require('ws');
 const path = require('path');
 const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
-const server = https.createServer(app); // Use HTTPS server
+const server = http.createServer(app); // Use HTTP server
 const wss = new WebSocket.Server({ server });
 
 // Store rooms and clients
@@ -186,7 +186,7 @@ wss.on('connection', (ws) => {
                         // Update user list
                         const users = Array.from(rooms.get(client.roomCode).clients).map(client => clients.get(client.clientId).username);
                         broadcast(client.roomCode, { type: 'user-list', users });
-                    }, 5 * 60 * 1000); // 5 minute
+                    },  5 * 60 * 1000); // 1 minute
 
                     // Update user list
                     const users = Array.from(rooms.get(client.roomCode).clients).map(client => clients.get(client.clientId).username);
@@ -282,7 +282,7 @@ wss.on('connection', (ws) => {
     });
 });
 
-const PORT = process.env.PORT || 10000; // Default to Render's port if not specified
+const PORT = process.env.PORT || 3000; // Use Render's PORT or fallback to 3000
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
