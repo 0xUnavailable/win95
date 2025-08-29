@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Win95 Chat Room</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="home" class="container">
@@ -30,17 +31,18 @@
     </div>
     <div id="chat" class="container">
         <h1>Room: <span id="roomName"></span> | Username: <span id="username">Connecting...</span></h1>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-            <button onclick="backToHome()">Back to Home</button>
+        <div class="button-container">
+            <button onclick="backToHome()" title="Back to Home">🏠</button>
+            <button id="retardiooButton" onclick="triggerRetardioo()" title="Random Retardioo" disabled>🤡</button>
             <div class="dropdown">
-                <button id="userListButton">Users in Room</button>
+                <button id="userListButton" title="Users in Room">👥</button>
                 <div id="userList" class="dropdown-content"></div>
             </div>
         </div>
         <div id="messages"></div>
         <div class="input-container">
             <input id="messageInput" type="text" placeholder="Type a message..." onkeydown="if(event.key === 'Enter') sendMessage()">
-            <button id="cancelReplyButton" class="cancel-reply" style="display: none;">Cancel Reply</button>
+            <button id="cancelReplyButton" class="cancel-reply" style="display: none;" onclick="cancelReply()">Cancel Reply</button>
             <button onclick="sendMessage()">Send</button>
         </div>
         <div style="margin-top: 10px;">
