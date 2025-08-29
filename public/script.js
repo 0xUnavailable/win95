@@ -64,7 +64,7 @@ function backToHome() {
 }
 
 function connectWebSocket() {
-    ws = new WebSocket(`ws://${window.location.host}/ws`);
+    ws = new WebSocket(`wss://${window.location.host}/ws`); // Changed ws:// to wss://
     ws.onopen = () => {
         ws.send(JSON.stringify({ type: 'join-room', code: roomCode, clientId }));
     };

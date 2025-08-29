@@ -1,11 +1,12 @@
 const express = require('express');
-const http = require('http');
+const https = require('https'); // Changed from http to https
 const WebSocket = require('ws');
 const path = require('path');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
-const server = http.createServer(app);
+const server = https.createServer(app); // Use HTTPS server
 const wss = new WebSocket.Server({ server });
 
 // Store rooms and clients
@@ -19,8 +20,18 @@ app.use(express.static(path.join(__dirname, 'public')));
 function generateUsername() {
     const adjectives = ['Cool', 'Brave', 'Swift', 'Wise', 'Bold', 'Clever', 'Fierce', 'Gentle'];
     const nouns = ['Fox', 'Wolf', 'Eagle', 'Tiger', 'Bear', 'Lion', 'Hawk', 'Deer'];
-    const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `${adjectives[Math.floor(Math.random() * adjectives.length)]}${nouns[Math.floor(Math.random() * nouns.length)]}${randomNum}`;
+    const randomNum = crypto.randomInt(10000).toString().padStart(4, '0');
+    return `${adjectives[crypto.randomInt(adjectives.length)]}${nouns[crypto.randomInt(nouns.length)]}${randomNum}`;
+}
+
+// Shuffle array using Fisher-Yates algorithm with crypto.randomInt
+function shuffleArray(array) {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = crypto.randomInt(0, i + 1);
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
 }
 
 // Broadcast message to all clients in a room except the sender
@@ -143,7 +154,8 @@ wss.on('connection', (ws) => {
                     // Select a random client from the room
                     const roomClients = Array.from(room.clients);
                     if (roomClients.length === 0) return; // No clients in room
-                    const randomClientWs = roomClients[Math.floor(Math.random() * roomClients.length)];
+                    const shuffledClients = shuffleArray(roomClients);
+                    const randomClientWs = shuffledClients[0];
                     const randomClientId = randomClientWs.clientId;
                     const randomClient = clients.get(randomClientId);
                     if (!randomClient) return; // Client not found
@@ -270,7 +282,7 @@ wss.on('connection', (ws) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // Default to Render's port if not specified
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
