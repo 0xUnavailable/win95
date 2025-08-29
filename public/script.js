@@ -16,6 +16,9 @@ let retardiooClientId = null;
 let retardiooOriginalUsername = null;
 let pendingRetardiooUsername = null; // Store username for local Retardioo notification
 const statusMessages = new Map(); // Track status messages to deduplicate
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_INTERVAL = 3000; // 3 seconds base interval
 
 function createRoom() {
     roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -57,6 +60,7 @@ function backToHome() {
     retardiooOriginalUsername = null;
     pendingRetardiooUsername = null;
     document.getElementById('retardiooButton').disabled = true;
+    reconnectAttempts = 0; // Reset reconnect attempts
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
         document.getElementById('recordButton').textContent = 'Record Voice';
@@ -64,9 +68,14 @@ function backToHome() {
 }
 
 function connectWebSocket() {
-    ws = new WebSocket(`wss://${window.location.host}/ws`); // Changed ws:// to wss://
+    ws = new WebSocket(`wss://${window.location.host}/ws`);
     ws.onopen = () => {
-        ws.send(JSON.stringify({ type: 'join-room', code: roomCode, clientId }));
+        reconnectAttempts = 0; // Reset on successful connection
+        ws.send(JSON.stringify({ type: 'join-room', code: roomCode, clientId, preventNotification: username !== '' }));
+        if (username) {
+            // Restore username if reconnecting
+            document.getElementById('username').textContent = username;
+        }
     };
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -111,7 +120,19 @@ function connectWebSocket() {
         }
     };
     ws.onclose = () => {
-        addMessage('Disconnected from server', 'status');
+        addMessage('Disconnected from server. Reconnecting...', 'status');
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            setTimeout(() => {
+                reconnectAttempts++;
+                console.log(`Reconnect attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
+                connectWebSocket();
+            }, RECONNECT_INTERVAL * Math.pow(2, reconnectAttempts)); // Exponential backoff
+        } else {
+            addMessage('Failed to reconnect after multiple attempts.', 'status');
+        }
+    };
+    ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
     };
 }
 
@@ -177,13 +198,11 @@ function updateRetardiooUI(targetClientId, originalUsername) {
 
 function revertRetardiooUI(targetClientId, originalUsername) {
     console.log(`Reverting Retardioo UI: targetClientId=${targetClientId}, originalUsername=${originalUsername}`);
-    // Update username for the affected client
     if (targetClientId === clientId) {
         username = originalUsername;
         document.getElementById('username').textContent = originalUsername;
         document.getElementById('username').classList.remove('retardioo');
     }
-    // Update messages
     document.querySelectorAll(`.message[data-message*="${originalUsername}"]`).forEach(message => {
         const data = JSON.parse(message.dataset.message);
         if (data.username === 'Retardioo') {
@@ -200,9 +219,7 @@ function revertRetardiooUI(targetClientId, originalUsername) {
             }
         }
     });
-    // Update user list
     updateUserList([...document.querySelectorAll('#userList p')].map(p => p.textContent).map(u => u === 'Retardioo' ? originalUsername : u));
-    // Update reaction users
     document.querySelectorAll('.message').forEach(message => {
         const data = JSON.parse(message.dataset.message);
         if (data.reactions) {
@@ -313,8 +330,8 @@ function addReply(username, message, replyTo, className = '', messageId = null) 
     if (replyTo.type === 'voice') quoteContent = '[Voice Message]';
     const truncatedContent = quoteContent.length > 50 ? quoteContent.substring(0, 50) + '...' : quoteContent;
     
-    const replyToDisplayUsername = (replyTo.clientId === retardiooClientId) ? 'Retardioo' : replyTo.username;
-    const replyUsernameSpan = `<span${replyToDisplayUsername === 'Retardioo' ? ' class="retardioo"' : ''}>${replyToDisplayUsername}</span>`;
+    // Use replyTo.username directly (original username from server or dataset)
+    const replyUsernameSpan = `<span${replyTo.username === 'Retardioo' ? ' class="retardioo"' : ''}>${replyTo.username}</span>`;
     
     const senderDisplayUsername = (username === 'Retardioo' || (className.includes('sender') && clientId === retardiooClientId)) ? 'Retardioo' : username;
     const usernameSpan = `<span${senderDisplayUsername === 'Retardioo' ? ' class="retardioo"' : ''}>${senderDisplayUsername}</span>`;
@@ -530,7 +547,7 @@ function replyToMessage() {
             clientId: data.clientId || null
         };
         console.log('Setting reply mode:', replyToData);
-        const displayUsername = (data.clientId === retardiooClientId) ? 'Retardioo' : data.username;
+        const displayUsername = data.username; // Use original username
         const input = document.getElementById('messageInput');
         input.placeholder = `Replying to ${displayUsername}: ${replyToData.content.length > 50 ? replyToData.content.substring(0, 50) + '...' : replyToData.content}`;
         input.value = '';

@@ -1,12 +1,12 @@
 const express = require('express');
-const http = require('http'); // Reverted to http from https
+const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
-const server = http.createServer(app); // Use HTTP server
+const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 // Store rooms and clients
@@ -46,8 +46,28 @@ function broadcast(roomCode, message, excludeClientId = null) {
     }
 }
 
+// Keep-alive ping/pong
+setInterval(() => {
+    wss.clients.forEach((ws) => {
+        if (ws.isAlive === false) {
+            const client = clients.get(ws.clientId);
+            if (client) {
+                console.log(`Terminating inactive client: ${client.username}`);
+                ws.terminate();
+            }
+            return;
+        }
+        ws.isAlive = false;
+        ws.ping();
+    });
+}, 30000); // Ping every 30 seconds
+
 wss.on('connection', (ws) => {
     let clientId;
+    ws.isAlive = true; // Initialize keep-alive flag
+    ws.on('pong', () => {
+        ws.isAlive = true; // Mark client as alive on pong
+    });
 
     ws.on('message', (message) => {
         try {
@@ -186,7 +206,7 @@ wss.on('connection', (ws) => {
                         // Update user list
                         const users = Array.from(rooms.get(client.roomCode).clients).map(client => clients.get(client.clientId).username);
                         broadcast(client.roomCode, { type: 'user-list', users });
-                    },  5 * 60 * 1000); // 1 minute
+                    }, 60 * 1000); // 1 minute
 
                     // Update user list
                     const users = Array.from(rooms.get(client.roomCode).clients).map(client => clients.get(client.clientId).username);
