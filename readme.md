@@ -8,13 +8,7 @@ You have no permanent identity—just a unique, fun username per room—and no m
 ---
 
 ## Motivation
-Existing platforms fall short when it comes to meaningful, private collaboration in the crypto community:
-
-* **Twitter:** A popularity contest where algorithms favor massive accounts, and DMs feel transactional or unsafe.
-* **Reddit:** Overly restrictive due to heavy moderation and automods, and fundamentally unsuited for real-time chat.
-* **Discord:** Overrun by bots and airdrop farmers, diluting high-signal conversations.
-* **Bluesky:** Low engagement with minimal real-time collaboration appeal.
-* **Farcaster:** Promising, but affected by algorithmic distribution issues and lacking native anonymity.
+Existing platforms fall short when it comes to meaningful, private collaboration in the crypto community
 
 **The Goal:** Create an environment where external clout carries zero weight. Identity is fully anonymous, communications are secured via **AES-GCM** end-to-end encryption, and nothing persists to a database.
 
