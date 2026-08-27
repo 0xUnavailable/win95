@@ -124,5 +124,3 @@ const nouns = ['Fox', 'Wolf', 'Eagle', 'Bear', 'Hawk', 'Lion', 'Deer', 'Owl', 'T
 ```
 
 *Usernames are assembled automatically as `Adjective + Noun` (e.g., `SwiftFox`) and are guaranteed unique within each active room.*
-
-```
